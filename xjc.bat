@@ -1,0 +1,1 @@
+"%JAVA_HOME%\bin\xjc.exe" -encoding utf-8 -p com.becketal.lsc.plugins.connectors.foreignkeysrc.generated -d src\main\java -extension -b lsc.episode src\main\resources\schemas\lsc-foreign-key-plugin-1.0.xsd
