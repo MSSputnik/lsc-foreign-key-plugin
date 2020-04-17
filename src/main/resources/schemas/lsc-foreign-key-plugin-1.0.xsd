@@ -9,6 +9,7 @@
 	<xsd:element name="ForeignKeySrcServiceConfig">
 		<xsd:complexType>
 			<xsd:sequence>
+				<xsd:element name="useKeyData" type="xsd:boolean" />
 				<xsd:element name="keySource" type="sourceType" />
 				<xsd:element name="dataSource" type="sourceType" />
 			</xsd:sequence>

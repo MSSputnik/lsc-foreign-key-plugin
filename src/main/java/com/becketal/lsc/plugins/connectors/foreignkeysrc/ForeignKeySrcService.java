@@ -31,8 +31,10 @@ public class ForeignKeySrcService implements IService {
 	protected TaskType dataTaskType;
 	protected TaskType keyTaskType;
 
-	private final Class<IBean> beanClass;
+	protected boolean useKeyData;
 
+	private final Class<IBean> beanClass;
+	
 	@SuppressWarnings("unchecked")
 	public ForeignKeySrcService(final TaskType task) throws LscServiceConfigurationException {
 		// get the plug-in configuration
@@ -57,6 +59,9 @@ public class ForeignKeySrcService implements IService {
 						// Continue to read the configuration from the pluginSourceServiceType
 						LOGGER.debug("configType is " + pluginSourceServiceType.getClass().getName());
 						LOGGER.debug("Read config from " + pluginSourceServiceType.getName());
+
+						// useKeyData
+						useKeyData = config.isUseKeyData();
 
 						// Initialize key source
 						SourceType keySource = config.getKeySource();
@@ -105,27 +110,55 @@ public class ForeignKeySrcService implements IService {
 
 	public IBean getBean(String pivotName, LscDatasets pivotAttributes, boolean fromSameService)
 			throws LscServiceException {
-		LOGGER.debug("getBean is called");
-		IBean dataIBean = dataSourceService.getBean(pivotName, pivotAttributes, fromSameService);
-		if (dataIBean == null) {
-			LOGGER.info("NO data fetched for " + pivotName + ". Create empty dataset.");
-			// need to create an empty iBean of type 'iBeanType';
-			try {
-				dataIBean = beanClass.newInstance();
-				dataIBean.setMainIdentifier(pivotName);
-				dataIBean.setDatasets(pivotAttributes);
-			} catch (Exception e) {
-				LOGGER.error("Failed to receate new bean of type " + beanClass.getClass().getName());
-				if (LOGGER.isDebugEnabled())
-					e.printStackTrace();
+		IBean dataIBean = null;
+		if (fromSameService) {
+			Map<String, Object> internalDataset = null;
+
+			if (useKeyData) {
+				internalDataset = pivotAttributes.getDatasets();
+
+				IBean keyIBean = keySourceService.getBean(pivotName, pivotAttributes, fromSameService);
+				if (keyIBean != null) {
+					// add the found data to our resulting dataset
+					internalDataset.putAll(keyIBean.datasets().getDatasets());
+				} else {
+					LOGGER.debug("keySourceService entry is null. Data is igrnored.");
+				}
 			}
+
+			dataIBean = dataSourceService.getBean(pivotName, pivotAttributes, fromSameService);
+			if (dataIBean == null) {
+				LOGGER.info("NO data fetched for " + pivotName + ". Create empty dataset.");
+				// need to create an empty iBean of type 'iBeanType';
+				try {
+					dataIBean = beanClass.newInstance();
+					dataIBean.setMainIdentifier(pivotName);
+					dataIBean.setDatasets(pivotAttributes);
+				} catch (Exception e) {
+					LOGGER.error("Failed to receate new bean of type " + beanClass.getClass().getName());
+					if (LOGGER.isDebugEnabled())
+						e.printStackTrace();
+				}
+			}
+			if (useKeyData) {
+				// add the found data to our resulting dataset. Only necessary when keyData should be used.
+				internalDataset.putAll(dataIBean.datasets().getDatasets());
+
+				// add the resulting dataset to our return IBean
+				dataIBean.setDatasets(new LscDatasets(internalDataset));
+			}
+		} else {
+			// fromSameService is false, so it is the clean task.
+			// only the keySourceService is used.
+			dataIBean = keySourceService.getBean(pivotName, pivotAttributes, fromSameService);
 		}
 		return dataIBean;
 	}
 
 	public Map<String, LscDatasets> getListPivots() throws LscServiceException {
 		LOGGER.debug("getListPivots is called");
-		return keySourceService.getListPivots();
+		Map<String, LscDatasets> result =  keySourceService.getListPivots();
+		return result;
 	}
 
 
