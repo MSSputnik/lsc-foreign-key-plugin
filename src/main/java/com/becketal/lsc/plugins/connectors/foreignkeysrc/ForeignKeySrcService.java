@@ -1,6 +1,7 @@
 package com.becketal.lsc.plugins.connectors.foreignkeysrc;
 
 import java.lang.reflect.Constructor;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -115,7 +116,8 @@ public class ForeignKeySrcService implements IService {
 			Map<String, Object> internalDataset = null;
 
 			if (useKeyData) {
-				internalDataset = pivotAttributes.getDatasets();
+				internalDataset = new HashMap<String, Object>(); 
+				internalDataset.putAll(pivotAttributes.getDatasets());
 
 				IBean keyIBean = keySourceService.getBean(pivotName, pivotAttributes, fromSameService);
 				if (keyIBean != null) {
